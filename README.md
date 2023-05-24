@@ -1,6 +1,6 @@
-# ☠Bulen☠
+# ☠Bulen Reformed☠
 
-**Group members:**
+**Winged Hussar:**
 - Julius
 
 This repository contains  
