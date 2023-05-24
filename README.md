@@ -2,7 +2,6 @@
 
 **Group members:**
 - Julius
-- Sophie
 
 This repository contains  
 1. Inaugural project 
