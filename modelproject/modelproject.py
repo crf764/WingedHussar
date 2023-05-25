@@ -3,6 +3,7 @@ from scipy.optimize import minimize
 from scipy.optimize import fsolve
 
 class Bertrand:
+    '''Simple Bertrand game'''
     def __init__(self, a, c1, c2):
         self.a = a  # Parameter for demand
         self.c1 = c1  # Marginal Cost for firm 1
@@ -61,6 +62,7 @@ class Bertrand:
 
 
 class BertrandN:
+    '''Bertrand game with N firms'''
     def __init__(self, a, costs):
         self.a = a  # Parameter for demand
         self.costs = costs  # List of marginal costs for each firm
@@ -122,3 +124,115 @@ class BertrandN:
         min_price = min(prices)
         min_price_index = prices.index(min_price)
         return min_price, self.profits(prices)[min_price_index], self.demand(prices)[min_price_index]
+    
+class DynamicBertrand:
+    '''Dynamic Bertrand competition'''
+    def __init__(self, a, c1, c2, beta=0.95, n_periods=50):
+        self.a = a  # Parameter for demand
+        self.c1 = c1  # Cost for firm 1
+        self.c2 = c2  # Cost for firm 2
+        self.beta = beta  # Discount factor
+        self.n_periods = n_periods  # Number of periods
+
+    def demand(self, p1, p2):
+        # Demand function
+        if p1 < p2:
+            return self.a - p1, 0
+        elif p1 > p2:
+            return 0, self.a - p2
+        else:
+            d = self.a - p1
+            return d/2, d/2
+
+    def profits(self, p1, p2):
+        # Profit functions for firm 1 and firm 2
+        d1, d2 = self.demand(p1, p2)
+        return (p1-self.c1)*d1, (p2-self.c2)*d2
+
+    def reaction(self, p1, p2, p1_next, p2_next):
+        res1 = minimize(lambda x: -(self.profits(x[0], p2)[0] + self.beta * self.profits(p1_next, x[0])[0]), 
+                        [self.c1], bounds=[(self.c1, self.a)])
+        res2 = minimize(lambda x: -(self.profits(p1, x[0])[1] + self.beta * self.profits(x[0], p2_next)[1]), 
+                        [self.c2], bounds=[(self.c2, self.a)])
+        return res1.x[0], res2.x[0]
+
+    def simulate(self):
+        # Initialize prices
+        prices1 = np.zeros(self.n_periods)
+        prices2 = np.zeros(self.n_periods)
+
+        # Initial prices
+        prices1[0] = self.c1 if self.c1 > self.a else self.a
+        prices2[0] = self.c2 if self.c2 > self.a else self.a
+
+        for t in range(self.n_periods - 1):
+            # Update prices according to reaction functions
+            prices1[t+1], prices2[t+1] = self.reaction(prices1[t], prices2[t], prices1[t], prices2[t])
+
+        return prices1, prices2
+
+
+
+class TriggerBertrand:
+    def __init__(self, a, c1, c2, delta, n_periods):
+        self.a = a
+        self.c1 = c1
+        self.c2 = c2
+        self.delta = delta
+        self.n_periods = n_periods
+
+    def demand(self, p1, p2):
+        if p1 < p2:
+            return self.a - p1, 0
+        elif p1 > p2:
+            return 0, self.a - p2
+        else:
+            d = self.a - p1
+            return d/2, d/2
+
+    def profits(self, p1, p2):
+        d1, d2 = self.demand(p1, p2)
+        return (p1 - self.c1) * d1, (p2 - self.c2) * d2
+
+    def cooperative_price(self):
+        # Define the objective function to minimize
+        def obj(p):
+            return -((1 - self.delta) / (1 + self.delta)) * ((self.a - p) * p - self.c1 * (self.a - p))
+
+        # The cooperative price is higher than costs and less than monopoly price
+        bounds = [(max(self.c1, self.c2), self.a/2)]
+        result = minimize(obj, self.a/2, bounds=bounds)
+        return result.x[0]
+
+    def simulate(self):
+        # Calculate the cooperative price
+        coop_price = self.cooperative_price()
+
+        # Initialize prices and profits
+        prices1 = np.full(self.n_periods, coop_price)
+        prices2 = np.full(self.n_periods, coop_price)
+        profits1 = np.zeros(self.n_periods)
+        profits2 = np.zeros(self.n_periods)
+
+        for t in range(self.n_periods):
+            # Calculate profits
+            profits1[t], profits2[t] = self.profits(prices1[t], prices2[t])
+            if t < self.n_periods - 1:
+                # Estimate future profits for each firm when cooperating or deviating
+                future_profits_coop = self.delta * (self.a - coop_price) * coop_price
+                future_profits_deviate = (self.a - self.c1) * self.c1 + self.delta * self.c1 * (self.a - self.c1)
+
+                # If the estimated future profits from deviating are higher than from cooperating, firm 1 deviates
+                if future_profits_deviate > future_profits_coop:
+                    prices1[t+1] = self.c1
+                else:
+                    prices1[t+1] = coop_price
+
+                # Do the same for firm 2
+                future_profits_deviate = (self.a - self.c2) * self.c2 + self.delta * self.c2 * (self.a - self.c2)
+                if future_profits_deviate > future_profits_coop:
+                    prices2[t+1] = self.c2
+                else:
+                    prices2[t+1] = coop_price
+
+        return prices1, prices2
