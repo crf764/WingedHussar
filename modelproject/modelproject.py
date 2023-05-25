@@ -1,22 +1,124 @@
-from scipy import optimize
+import numpy as np
+from scipy.optimize import minimize
+from scipy.optimize import fsolve
 
-def solve_ss(alpha, c):
-    """ Example function. Solve for steady state k. 
+class Bertrand:
+    def __init__(self, a, c1, c2):
+        self.a = a  # Parameter for demand
+        self.c1 = c1  # Marginal Cost for firm 1
+        self.c2 = c2  # Marginal Cost for firm 2
 
-    Args:
-        c (float): costs
-        alpha (float): parameter
+    def demand(self, p1,p2):
+        # Demand function
+        if p1 > p2:
+            d1 = 0
+            d2 = max(0, self.a - p2)
+        elif p1 == p2:
+            d1 = max(0, (self.a - p1)/2)
+            d2 = max(0, (self.a - p2)/2)
+        else: 
+            d1 = max(0, self.a - p1)
+            d2 = 0
 
-    Returns:
-        result (RootResults): the solution represented as a RootResults object.
+        return d1, d2
+       
+    def profits(self, p1, p2):
+        # Profit functions for firm 1 and firm 2
+        d1, d2 = self.demand(p1, p2)
+        if p1 > p2:
+            return 0, (p2-self.c2)*d2
+        elif p1==p2:
+            return ((p1-self.c1)*d1)/2,((p2-self.c2)*d2)/2 
+        else:
+            return (p1-self.c1), 0
 
-    """ 
+    def BR(self, p1, p2):
+        # Best Response function, finds the price that maximizes profit given other firm's price
+
     
-    # a. Objective function, depends on k (endogenous) and c (exogenous).
-    f = lambda k: k**alpha - c
-    obj = lambda kss: kss - f(kss)
+        res1 = minimize(lambda x: -self.profits(x[0], p2)[0], [self.c1], bounds=[(self.c1, None)], method= 'Nelder-Mead')
+        res2 = minimize(lambda x: -self.profits(p1, x[0])[1], [self.c2], bounds=[(self.c2, None)], method= 'Nelder-Mead')
+      
+        return res1.x[0], res2.x[0]
 
-    #. b. call root finder to find kss.
-    result = optimize.root_scalar(obj,bracket=[0.1,100],method='bisect')
+    def solve(self, tol=1e-7, max_iter=500):
+        # Solves for the Bertrand-Nash equilibrium
+        p1, p2 = self.c1, self.c2  # Start with prices equal to marginal cost, best at making it converge properly
+        for _ in range(max_iter):
+            new_p1, new_p2 = self.BR(p1, p2)
+        
+            # Enforce that prices can't be lower than costs
+            new_p1 = max(new_p1, self.c1)
+            new_p2 = max(new_p2, self.c2)
+        
+            if np.abs(new_p1 - p1) < tol and np.abs(new_p2 - p2) < tol:
+                break
+            p1, p2 = new_p1, new_p2
+        else:
+            raise ValueError("No convergence after maximum number of iterations")
+        return p1, p2, *self.profits(p1, p2), *self.demand(p1, p2)
     
-    return result
+
+
+class BertrandN:
+    def __init__(self, a, costs):
+        self.a = a  # Parameter for demand
+        self.costs = costs  # List of marginal costs for each firm
+        self.n = len(costs)
+
+    def demand(self, prices):
+        # Demand function generalized for n firms
+        demands = [0]*self.n
+        min_price = min(prices)
+        min_price_firms = [i for i, p in enumerate(prices) if p == min_price]
+        for i in min_price_firms:
+            demands[i] = max(0, (self.a - min_price)/len(min_price_firms))
+        return demands
+       
+    def profits(self, prices):
+        # Profit function generalized for n firms
+        return [(prices[i] - self.costs[i])*self.demand(prices)[i] for i in range(self.n)]
+
+    def BR(self, prices):
+        # Best Response function generalized for n firms
+        new_prices = prices.copy()
+        for i in range(self.n):
+            res = minimize(lambda x: -self.profits([x[0] if j==i else prices[j] for j in range(self.n)])[i], 
+                           [self.costs[i]], bounds=[(self.costs[i], None)], method='Nelder-Mead')
+            new_prices[i] = res.x[0]
+        return new_prices
+
+    def solve(self, tol=1e-7, max_iter=500):
+        # Solves for the Bertrand-Nash equilibrium generalized for n firms
+        prices = self.costs.copy()  # Start with prices equal to marginal cost
+        for _ in range(max_iter):
+            new_prices = self.BR(prices)
+        
+            # Enforce that prices can't be lower than costs
+            new_prices = [max(new_prices[i], self.costs[i]) for i in range(self.n)]
+        
+            if all(np.abs(new_prices[i] - prices[i]) < tol for i in range(self.n)):
+                break
+            prices = new_prices
+        else:
+            raise ValueError("No convergence after maximum number of iterations")
+        return prices, self.profits(prices), self.demand(prices)
+    
+    def solvemin(self, tol=1e-7, max_iter=500):
+        # Solves for the Bertrand-Nash equilibrium generalized for n firms
+        prices = self.costs.copy()  # Start with prices equal to marginal cost
+        for _ in range(max_iter):
+            new_prices = self.BR(prices)
+        
+            # Enforce that prices can't be lower than costs
+            new_prices = [max(new_prices[i], self.costs[i]) for i in range(self.n)]
+        
+            if all(np.abs(new_prices[i] - prices[i]) < tol for i in range(self.n)):
+                break
+            prices = new_prices
+        else:
+            raise ValueError("No convergence after maximum number of iterations")
+        
+        min_price = min(prices)
+        min_price_index = prices.index(min_price)
+        return min_price, self.profits(prices)[min_price_index], self.demand(prices)[min_price_index]
