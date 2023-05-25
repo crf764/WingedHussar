@@ -1,8 +1,7 @@
-# ☠Bulen☠
+# ☠Bulen Reformed☠
 
-**Group members:**
+**Winged Hussar:**
 - Julius
-- Sophie
 
 This repository contains  
 1. Inaugural project 
