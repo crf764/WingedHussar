@@ -1,6 +1,6 @@
 # Model analysis project
 
-Our project is titled **PROJECT TITLE** and is about EXPLAIN.
+Our project is titled **The Bertrand Model Hackathon** and is about modelling different forms of the Bertrand Model numerically.
 
 The **results** of the project can be seen from running [modelproject.ipynb](modelproject.ipynb).
 
