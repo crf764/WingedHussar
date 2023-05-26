@@ -1,6 +1,6 @@
 # ☠Bulen Reanimated☠
 
-**Winged Hussar:**
+**Group members:**
 - Julius, crf764
 
 This repository contains:  
