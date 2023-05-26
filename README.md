@@ -3,7 +3,7 @@
 **Winged Hussar:**
 - Julius, crf764
 
-This repository contains  
+This repository contains:  
 1. Inaugural project 
 2. Data project 
 3. Model project 
