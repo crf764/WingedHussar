@@ -8,4 +8,3 @@ Group members:
 
 Julius Normann crf764
 
-Sophie Dybdahl Gramstrup qts904
