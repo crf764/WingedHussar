@@ -1,6 +1,6 @@
 # ☠Bulen Reanimated☠
 
-**Players:**
+**Students:**
 - Julius, crf764
 
 This repository contains:  
