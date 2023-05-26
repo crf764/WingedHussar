@@ -1,4 +1,4 @@
-# ☠Bulen Reformed☠
+# ☠Bulen Reanimated☠
 
 **Winged Hussar:**
 - Julius, crf764
